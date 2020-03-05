@@ -63,7 +63,11 @@ function promptMainMenu() {
         case "View roles":
           viewAllRoles();
           break;
+        case "View employees":
+          viewEmployees();
+          break;
         default:
+          console.log("Not yet available, coming soon!")
           connection.end();
       }
     })
@@ -204,10 +208,11 @@ function promptToAddEmployee() {
 
       for (var i = 0; i < res2.length; i++) {
         let managerName = res2[i].firstName + " " + res2[i].lastName;
-        manager.push(managerName);
+        managers.push(managerName);
       }
 
       managers.push("None");
+
 
       inquirer
         .prompt([
@@ -239,7 +244,7 @@ function promptToAddEmployee() {
             choices: managers,
             filter: (val) => {
               if (val === "None") {
-                return undefined;
+                return -1;
               }
               let choiceIndex = managers.indexOf(val);
               let employeeID = res2[choiceIndex].id;
@@ -250,14 +255,22 @@ function promptToAddEmployee() {
         .then(response => {
           console.log(response);
           // Add to the database
-          let queryString = `INSERT INTO employeeDB.employee (firstName, lastName, roleID, managerID) VALUES ("${response.newEmployeeFirstName}", "${response.newEmployeeLastName}", "${response.listOfRoles}", "${response.newEmployeeManager}")`;
+          let queryString;
+          if (response.newEmployeeManager === -1) {
+            queryString = `INSERT INTO employeeDB.employee (firstName, lastName, roleID, managerID) VALUES ("${response.newEmployeeFirstName}", "${response.newEmployeeLastName}", "${response.listOfRoles}", null)`; 
+          } else {
+            queryString = `INSERT INTO employeeDB.employee (firstName, lastName, roleID, managerID) VALUES ("${response.newEmployeeFirstName}", "${response.newEmployeeLastName}", "${response.listOfRoles}", "${response.newEmployeeManager}")`;
+          }
+           
 
           let query = connection.query(queryString, (err, res) => {
 
             if (err) {
               console.log(err);
+            } else {
+              console.log("New employee has been added!!!!")
             }
-            console.log("New employee has been added!!!!")
+            
             promptMainMenu();
           });
         });
@@ -265,8 +278,29 @@ function promptToAddEmployee() {
   });
 }
 
-function constviewAllRoles() {
+function viewAllRoles() {
   let queryString = `SELECT * FROM employeeDB.employeeRole`;
+  //values from our object below are substituted into "?" above.
+  let query = connection.query(queryString, (err, res) => {
+
+    if (err) {
+      console.log(err);
+    }
+    else {
+      console.table(res)
+    }
+    promptMainMenu();
+  });
+
+}
+
+function viewEmployees() {
+  let queryString = `SELECT e.id, e.firstName, e.lastName, r.title, r.salary, concat(m.firstName, ' ', m.lastName) AS Manager
+  FROM employeeDB.employee e
+  LEFT JOIN employeeDB.employeeRole r
+  ON e.roleID = r.id
+  LEFT JOIN employeeDB.employee m
+  ON e.managerID = m.id`;
   //values from our object below are substituted into "?" above.
   let query = connection.query(queryString, (err, res) => {
 
