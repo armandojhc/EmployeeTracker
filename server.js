@@ -15,13 +15,13 @@ const connection = mysql.createConnection({
   database: "employeeDB"
 });
 
-connection.connect(function(err) {
-    if (err) throw err;
-    console.log("connection was succesfull dude!");
-      promptMainMenu();
-  });
+connection.connect(function (err) {
+  if (err) throw err;
+  console.log("connection was succesfull dude!");
+  promptMainMenu();
+});
 
-promptMainMenu = () => {
+function promptMainMenu() {
 
   inquirer
     .prompt({
@@ -44,8 +44,8 @@ promptMainMenu = () => {
       ]
     })
     .then(response => {
-       switch (response.mainMenuSelection) {
-         case "Quit": 
+      switch (response.mainMenuSelection) {
+        case "Quit":
           connection.end();
           break;
         case "Add department":
@@ -65,11 +65,10 @@ promptMainMenu = () => {
           break;
         default:
           connection.end();
-       }
-    }) 
+      }
+    })
 }
-
-promptForNewDepartment = () => {
+function promptForNewDepartment() {
   inquirer
     .prompt({
       name: "newDepartment",
@@ -79,7 +78,7 @@ promptForNewDepartment = () => {
     .then(response => {
       // Add to the database
       let queryString = `INSERT INTO employeeDB.department (name) VALUES ("${response.newDepartment}")`;
-                              //values from our object below are substituted into "?" above.
+      //values from our object below are substituted into "?" above.
       let query = connection.query(queryString, (err, res) => {
 
         if (err) {
@@ -90,7 +89,7 @@ promptForNewDepartment = () => {
     })
 }
 
-promptForNewRole = () => {
+function promptForNewRole() {
 
   //Query the db for the departments
   let query = "SELECT * FROM employeeDB.department";
@@ -108,34 +107,34 @@ promptForNewRole = () => {
         let deptNameString = res[i].name;
         choiceList.push(deptNameString);
       }
-            
+
       //promptMainMenu();
 
       inquirer
         .prompt([
           {
-          name: "newRole",
-          type: "input",
-          message: "What is the title of the role you want to add?"
-        },
-        { 
-          name: "newRoleSalary",
-          type: "input",
-          message: "What is the salary?"
-        },
-        { 
-          name: "newRoleDepartmentID",
-          type: "rawlist",
-          message: "What is the deparment ID that the new role being added belongs to?",
-          choices: choiceList,
-          filter: (val) => {
-            let choiceIndex = choiceList.indexOf(val);
-            let deptID = res[choiceIndex].id;
-            return deptID;
+            name: "newRole",
+            type: "input",
+            message: "What is the title of the role you want to add?"
+          },
+          {
+            name: "newRoleSalary",
+            type: "input",
+            message: "What is the salary?"
+          },
+          {
+            name: "newRoleDepartmentID",
+            type: "rawlist",
+            message: "What is the deparment ID that the new role being added belongs to?",
+            choices: choiceList,
+            filter: (val) => {
+              let choiceIndex = choiceList.indexOf(val);
+              let deptID = res[choiceIndex].id;
+              return deptID;
+            }
           }
-        }
 
-      ])
+        ])
         .then(response => {
           console.log(response);
           // Add to the database
@@ -151,16 +150,16 @@ promptForNewRole = () => {
           })
 
         })
-        
+
     }
 
   })
-  
+
 }
 
-viewAllDepartments = () => {
+function viewAllDepartments() {
   let queryString = `SELECT * FROM employeeDB.department`;
-                              //values from our object below are substituted into "?" above.
+  //values from our object below are substituted into "?" above.
   let query = connection.query(queryString, (err, res) => {
 
     if (err) {
@@ -171,151 +170,104 @@ viewAllDepartments = () => {
     }
     promptMainMenu();
   });
-    
+
 }
 
-promptToAddEmployee = () => {
+function promptToAddEmployee() {
 
-    //Query the db for the departments
-    let query = "SELECT * FROM employeeDB.employeeRole";
-  
-    connection.query(query, (err, res) => {
+  let query = "SELECT * FROM employeeDB.employeeRole";
+
+  connection.query(query, (err, res) => {
+    if (err) {
+      console.log(err);
+      promptMainMenu();
+      return;
+    }
+
+    let roles = [];
+
+    for (var i = 0; i < res.length; i++) {
+      let roleTitleString = res[i].title;
+      roles.push(roleTitleString);
+    }
+
+    let query2 = "SELECT * FROM employeeDB.employee";
+
+    connection.query(query2, (err2, res2) => {
       if (err) {
-        console.log(err);
+        console.log(err2);
         promptMainMenu();
-      } else {
-  
-        let role = [];
-  
-        for (var i = 0; i < res.length; i++) {
-          let roleTitleString = res[i].title;
-          role.push(roleTitleString);
-        }
-
-        let query2 = "SELECT * FROM employeeDB.employee";
-
-        connection.query(query2, (err2, res2) => {
-          if (err) {
-            console.log(err2);
-            promptMainMenu();
-          } else {
-      
-            let manager = [];
-      
-            for (var i = 0; i < res2.length; i++) {
-              let managerName = res2[i].firstName + " " + res2[i].lastName;
-              manager.push(managerName);
-            }
-            manager.push("None");
-            
-            inquirer
-              .prompt([
-                {
-                  name: "newEmployeeFirstName",
-                  type: "input",
-                  message: "What is the first name?"
-                },
-                { 
-                  name: "newEmployeeLastName",
-                  type: "input",
-                  message: "What is thhe last name?"
-                },
-                { 
-                  name: "listOfRoles",
-                  type: "rawlist",
-                  message: "What is the role of the new employee you want to add?",
-                  choices: roles,
-                  filter: (val) => {
-                    let choiceIndex = roles.indexOf(val);
-                    let roleID = res[choiceIndex].id;
-                    return roleID;
-                  }
-                },
-                {
-                  name: "newEmployeeManager",
-                  type: "rawlist",
-                  message: "Who is the employee's manager?",
-                  choices: managers,
-                  filter: (val) => {
-                    if (val === "None") {
-                      return undefined;
-                    }
-                    let choiceIndex = managers.indexOf(val);
-                    let employeeID = res2[choiceIndex].id;
-                    return employeeID;
-                  }
-                }
-              ])
-              .then(response => {
-
-
-                promptMainMenu();
-              })
-              
-
-            
-
-          }
-
-        })
-
+        return;
       }
 
-    });
+      let managers = [];
 
-    
-  /*
-  //Query the DB for a list of roles
-  //roleQuery = "SELECT title FROM...."
-  //let  connection1 = connection.query(roleQuery, (err, roles) => {
-    if (err) {
+      for (var i = 0; i < res2.length; i++) {
+        let managerName = res2[i].firstName + " " + res2[i].lastName;
+        manager.push(managerName);
+      }
 
-    } else {
-      managerQuery = "SELECT lastName FROM...."
-      let connecton2 = connection.query(managerQuery, (err, managers) => {
-        if (err) {
+      managers.push("None");
 
-        } else {
-          inquirer
-          .prompt({
-            name: "employeeFirstName",
+      inquirer
+        .prompt([
+          {
+            name: "newEmployeeFirstName",
             type: "input",
-            message: "What is the employee's first name?"
+            message: "What is the first name?"
           },
           {
-            name: "employeeLastName",
+            name: "newEmployeeLastName",
             type: "input",
-            message: "What is the employee's last name?"
+            message: "What is thhe last name?"
           },
           {
-            name: "employeeRole",
-            type: "list",
-            message: "What is the employee's role?",
-            choices: []
+            name: "listOfRoles",
+            type: "rawlist",
+            message: "What is the role of the new employee you want to add?",
+            choices: roles,
+            filter: (val) => {
+              let choiceIndex = roles.indexOf(val);
+              let roleID = res[choiceIndex].id;
+              return roleID;
+            }
           },
           {
-            name: "employeeManager",
-            type: "list",
+            name: "newEmployeeManager",
+            type: "rawlist",
             message: "Who is the employee's manager?",
-            choices: []
-          })
-          .then(response => {
+            choices: managers,
+            filter: (val) => {
+              if (val === "None") {
+                return undefined;
+              }
+              let choiceIndex = managers.indexOf(val);
+              let employeeID = res2[choiceIndex].id;
+              return employeeID;
+            }
+          }
+        ])
+        .then(response => {
+          console.log(response);
+          // Add to the database
+          let queryString = `INSERT INTO employeeDB.employee (firstName, lastName, roleID, managerID) VALUES ("${response.newEmployeeFirstName}", "${response.newEmployeeLastName}", "${response.listOfRoles}", "${response.newEmployeeManager}")`;
 
+          let query = connection.query(queryString, (err, res) => {
 
+            if (err) {
+              console.log(err);
+            }
+            console.log("New employee has been added!!!!")
+            promptMainMenu();
           });
-        }
-      })
-    }
-  })
-    //After that completes Query the DB for a list of managers
-      //After that completes prompt the user for all the questions about the new employee
-
-      */
+        });
+    });
+  });
 }
 
-viewAllRoles = () => {
+function constviewAllRoles() {
   let queryString = `SELECT * FROM employeeDB.employeeRole`;
-                              //values from our object below are substituted into "?" above.
+  //values from our object below are substituted into "?" above.
   let query = connection.query(queryString, (err, res) => {
 
     if (err) {
@@ -326,5 +278,5 @@ viewAllRoles = () => {
     }
     promptMainMenu();
   });
-    
+
 }
